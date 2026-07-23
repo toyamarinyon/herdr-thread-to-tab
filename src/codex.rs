@@ -76,7 +76,8 @@ fn exchange(child: &mut Child, thread_id: &str, timeout: Duration) -> Result<Thr
     send(
         &mut input,
         &json!({"method":"initialize","id":0,"params":{"clientInfo":{
-            "name":"toyamarinyon_thread_to_tab","title":"Thread to Tab","version":"0.1.0"
+            "name":"toyamarinyon_thread_to_tab","title":"Thread to Tab",
+            "version":env!("CARGO_PKG_VERSION")
         }}}),
     )?;
     response(&receiver, 0, timeout)?;

@@ -101,7 +101,7 @@ herdr plugin unlink toyamarinyon.thread-to-tab
 
 ## Release process
 
-The `v0.1.0` tag, `Cargo.toml` version, and `herdr-plugin.toml` version must
+The `v0.1.1` tag, `Cargo.toml` version, and `herdr-plugin.toml` version must
 match. Push the release commit and tag from a release branch before merging it
 into the default branch. The tagged workflow verifies the versions, builds and
 validates the four supported targets, publishes a GitHub prerelease with

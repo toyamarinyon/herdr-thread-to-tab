@@ -14,20 +14,29 @@ fn listener_subscribes_skips_malformed_event_and_syncs() {
     let socket_path = directory.path().join("herdr.sock");
     let listener = UnixListener::bind(&socket_path).unwrap();
     let rename_log = directory.path().join("rename.log");
+    let list_count = directory.path().join("list-count");
     let fake_herdr = directory.path().join("fake-herdr");
     fs::write(
         &fake_herdr,
         format!(
             r#"#!/bin/sh
 case "$1 $2" in
-  "pane list") printf '%s\n' '{{"result":{{"panes":[]}}}}' ;;
+  "pane list")
+    if [ -f '{list_count}' ]; then
+      printf '%s\n' '{{"result":{{"panes":[{{"pane_id":"1-1"}}]}}}}'
+    else
+      : > '{list_count}'
+      printf '%s\n' '{{"result":{{"panes":[]}}}}'
+    fi
+    ;;
   "pane get") printf '%s\n' '{{"result":{{"pane":{{"agent":"claude","pane_id":"1-1","tab_id":"1:1","terminal_id":"term-1","terminal_title_stripped":"Listener title"}}}}}}' ;;
   "tab get") printf '%s\n' '{{"result":{{"tab":{{"label":"1","pane_count":1}}}}}}' ;;
   "tab rename") printf '%s|%s\n' "$3" "$4" > '{}' ;;
   *) exit 2 ;;
 esac
 "#,
-            rename_log.display()
+            rename_log.display(),
+            list_count = list_count.display(),
         ),
     )
     .unwrap();
@@ -44,9 +53,6 @@ esac
         let request: Value = serde_json::from_str(&request).unwrap();
         assert_eq!(request["method"], "events.subscribe");
         connection.write_all(b"not-json\n").unwrap();
-        connection
-            .write_all(b"{\"event\":{\"type\":\"pane.updated\",\"pane\":{\"pane_id\":\"1-1\"}}}\n")
-            .unwrap();
     });
 
     let binary = std::env::var_os("THREAD_TO_TAB_TEST_LISTENER_BINARY")

@@ -3,6 +3,7 @@ use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
+use std::time::Duration;
 use thread_to_tab::codex::CodexClient;
 use thread_to_tab::herdr::HerdrClient;
 
@@ -19,9 +20,11 @@ fn listen() -> Result<(), String> {
     let herdr = HerdrClient::new(required("HERDR_BIN_PATH")?);
     let codex = CodexClient::new(env::var("CODEX_BIN_PATH").unwrap_or_else(|_| "codex".into()));
 
-    for error in thread_to_tab::synchronize_existing(Path::new(&state_dir), &herdr, &codex) {
-        eprintln!("thread-to-tab: startup sync skipped: {error}");
-    }
+    log_sync_errors(thread_to_tab::synchronize_existing(
+        Path::new(&state_dir),
+        &herdr,
+        &codex,
+    ));
 
     let mut socket = UnixStream::connect(&socket_path)
         .map_err(|error| format!("connect Herdr socket: {error}"))?;
@@ -36,6 +39,16 @@ fn listen() -> Result<(), String> {
         .write_all(b"\n")
         .and_then(|_| socket.flush())
         .map_err(|error| format!("send subscription: {error}"))?;
+
+    // Restored panes can become queryable before their agent metadata and
+    // terminal titles are populated. The subscription is already active, so
+    // a single delayed pass closes that startup window without losing events.
+    std::thread::sleep(Duration::from_secs(1));
+    log_sync_errors(thread_to_tab::synchronize_existing(
+        Path::new(&state_dir),
+        &herdr,
+        &codex,
+    ));
 
     for line in BufReader::new(socket).lines() {
         match line {
@@ -58,6 +71,12 @@ fn listen() -> Result<(), String> {
         }
     }
     Err("Herdr event socket closed".into())
+}
+
+fn log_sync_errors(errors: Vec<String>) {
+    for error in errors {
+        eprintln!("thread-to-tab: startup sync skipped: {error}");
+    }
 }
 
 fn main() {
