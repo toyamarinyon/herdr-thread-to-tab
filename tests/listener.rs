@@ -49,7 +49,9 @@ esac
             .unwrap();
     });
 
-    let output = Command::new(env!("CARGO_BIN_EXE_thread-to-tab"))
+    let binary = std::env::var_os("THREAD_TO_TAB_TEST_LISTENER_BINARY")
+        .unwrap_or_else(|| env!("CARGO_BIN_EXE_thread-to-tab").into());
+    let output = Command::new(binary)
         .arg("--listen")
         .env("HERDR_ENV", "1")
         .env("HERDR_SOCKET_PATH", &socket_path)
