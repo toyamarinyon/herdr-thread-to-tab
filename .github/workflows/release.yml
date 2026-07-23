@@ -55,6 +55,9 @@ jobs:
       - if: matrix.command == 'cross'
         uses: taiki-e/install-action@cross
       - run: ${{ matrix.command }} build --release --locked --target ${{ matrix.target }}
+      - name: Verify GNU/Linux baseline
+        if: contains(matrix.target, 'unknown-linux-gnu')
+        run: sh scripts/verify-glibc-baseline.sh "target/${{ matrix.target }}/release/thread-to-tab" 2.18
       - name: Package
         run: |
           strip "target/${{ matrix.target }}/release/thread-to-tab" || true

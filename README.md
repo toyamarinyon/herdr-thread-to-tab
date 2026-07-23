@@ -20,7 +20,7 @@ Rust, Node.js, Cargo, and a package manager are not runtime requirements.
 After installation, Herdr and—only for Codex metadata—the Codex CLI are the
 only required executables.
 
-Release binaries target macOS 11 or newer and GNU/Linux with glibc 2.17 or
+Release binaries target macOS 11 or newer and GNU/Linux with glibc 2.18 or
 newer on the four documented x86_64/aarch64 combinations.
 
 Claude Code works from its default inferred terminal title. Codex reads the
@@ -101,7 +101,7 @@ herdr plugin unlink toyamarinyon.thread-to-tab
 
 ## Release process
 
-The `v0.1.1` tag, `Cargo.toml` version, and `herdr-plugin.toml` version must
+The release tag, `Cargo.toml` version, and `herdr-plugin.toml` version must
 match. Push the release commit and tag from a release branch before merging it
 into the default branch. The tagged workflow verifies the versions, builds and
 validates the four supported targets, publishes a GitHub prerelease with
