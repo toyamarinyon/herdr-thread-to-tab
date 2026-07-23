@@ -11,7 +11,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -48,7 +48,7 @@ jobs:
     env:
       MACOSX_DEPLOYMENT_TARGET: "11.0"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -61,7 +61,7 @@ jobs:
           mkdir package
           cp "target/${{ matrix.target }}/release/thread-to-tab" LICENSE package/
           tar -czf "thread-to-tab-${GITHUB_REF_NAME}-${{ matrix.target }}.tar.gz" -C package thread-to-tab LICENSE
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
           path: thread-to-tab-*.tar.gz
@@ -70,8 +70,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
@@ -80,7 +80,7 @@ jobs:
         run: sha256sum thread-to-tab-*.tar.gz > SHA256SUMS
       - name: Verify release assets
         run: sh scripts/verify-release-assets.sh "$GITHUB_REF_NAME" dist
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           prerelease: true
           files: |
