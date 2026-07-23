@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Verify versions
+        run: |
+          test "$GITHUB_REF_NAME" = "v$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' Cargo.toml)"
+          test "$GITHUB_REF_NAME" = "v$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' herdr-plugin.toml)"
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: cargo build --release --locked
+      - run: sh tests/installer.sh
+      - run: sh tests/release-assets.sh
+      - run: sh tests/local-release-smoke.sh
+
+  build:
+    needs: verify
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            command: cross
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            command: cross
+          - target: x86_64-apple-darwin
+            os: macos-15-intel
+            command: cargo
+          - target: aarch64-apple-darwin
+            os: macos-14
+            command: cargo
+    runs-on: ${{ matrix.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - if: matrix.command == 'cross'
+        uses: taiki-e/install-action@cross
+      - run: ${{ matrix.command }} build --release --locked --target ${{ matrix.target }}
+      - name: Package
+        run: |
+          strip "target/${{ matrix.target }}/release/thread-to-tab" || true
+          mkdir package
+          cp "target/${{ matrix.target }}/release/thread-to-tab" LICENSE package/
+          tar -czf "thread-to-tab-${GITHUB_REF_NAME}-${{ matrix.target }}.tar.gz" -C package thread-to-tab LICENSE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: thread-to-tab-*.tar.gz
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum thread-to-tab-*.tar.gz > SHA256SUMS
+      - name: Verify release assets
+        run: sh scripts/verify-release-assets.sh "$GITHUB_REF_NAME" dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          files: |
+            dist/thread-to-tab-*.tar.gz
+            dist/SHA256SUMS
+      - name: Smoke install from published release
+        env:
+          THREAD_TO_TAB_VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION=${THREAD_TO_TAB_VERSION#v}
+          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/scripts/install-binary.sh" -o install.sh
+          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/herdr-plugin.toml" -o herdr-plugin.toml
+          mkdir -p scripts bin
+          mv install.sh scripts/install-binary.sh
+          THREAD_TO_TAB_VERSION="$VERSION" sh scripts/install-binary.sh
+          test -x bin/thread-to-tab

@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  rust:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: cargo build --release
+      - run: sh tests/installer.sh
+      - run: sh tests/release-assets.sh
+      - run: sh tests/local-release-smoke.sh
+      - run: test "$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' herdr-plugin.toml)" = "$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' Cargo.toml)"
