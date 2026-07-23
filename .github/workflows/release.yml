@@ -17,8 +17,8 @@ jobs:
           components: rustfmt, clippy
       - name: Verify versions
         run: |
-          test "$GITHUB_REF_NAME" = "v$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' Cargo.toml)"
-          test "$GITHUB_REF_NAME" = "v$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' herdr-plugin.toml)"
+          test "$GITHUB_REF_NAME" = "v$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml)"
+          test "$GITHUB_REF_NAME" = "v$(sed -n 's/^version = "\([^"]*\)"$/\1/p' herdr-plugin.toml)"
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
