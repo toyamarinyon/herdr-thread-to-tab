@@ -7,6 +7,16 @@ with one command:
 herdr plugin install toyamarinyon/herdr-thread-to-tab
 ```
 
+Restart the Herdr server once after installation so the startup listener is
+launched:
+
+```sh
+herdr server stop
+```
+
+Herdr starts the server again when you reconnect. Restarting the server also
+restarts pane processes, so do this at a convenient time.
+
 The plugin downloads a verified native binary during installation. Python,
 Rust, Node.js, Cargo, and a package manager are not runtime requirements.
 
@@ -27,10 +37,6 @@ Claude Code works from its default inferred terminal title. Codex reads the
 thread `name`, then `preview`, through the local `codex app-server`; it does not
 require a `[tui].terminal_title` setting. If Codex metadata is unavailable, a
 safe captured terminal title may be used.
-
-Herdr starts startup listeners while restoring a session. After installing,
-restart the Herdr server once if the listener has not started. This restarts
-pane processes, so do it at a convenient time.
 
 ## Behavior
 
