@@ -1,6 +1,6 @@
 id = "toyamarinyon.thread-to-tab"
 name = "Thread to Tab"
-version = "0.1.2"
+version = "0.1.3"
 min_herdr_version = "0.7.0"
 description = "Keep single-pane tab labels in sync with coding-agent terminal titles."
 platforms = ["macos", "linux"]
