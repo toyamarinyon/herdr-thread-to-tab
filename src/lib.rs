@@ -64,16 +64,18 @@ pub fn synchronize_pane(
 }
 
 pub fn event_pane_id(value: &serde_json::Value) -> Option<&str> {
+    // Streamed events arrive as {"event":"pane_updated","data":{"type":"pane_updated","pane":{...}}}
+    // while subscription requests use dot names; accept both spellings.
     if matches!(
         value.get("type").and_then(|v| v.as_str()),
-        Some("pane.created" | "pane.updated")
+        Some("pane.created" | "pane.updated" | "pane_created" | "pane_updated")
     ) {
         return value
             .get("pane")
             .and_then(|pane| pane.get("pane_id"))
             .and_then(|id| id.as_str());
     }
-    for key in ["event", "result"] {
+    for key in ["data", "event", "result"] {
         if let Some(id) = value.get(key).and_then(event_pane_id) {
             return Some(id);
         }
@@ -207,5 +209,24 @@ mod tests {
             event_pane_id(&serde_json::json!({"type": "tab.renamed"})),
             None
         );
+    }
+
+    #[test]
+    fn extracts_streamed_subscription_events() {
+        let updated = serde_json::json!({
+            "event": "pane_updated",
+            "data": {"type": "pane_updated", "pane": {"pane_id": "w23:p1"}}
+        });
+        assert_eq!(event_pane_id(&updated), Some("w23:p1"));
+        let created = serde_json::json!({
+            "event": "pane_created",
+            "data": {"type": "pane_created", "pane": {"pane_id": "w24:p1"}}
+        });
+        assert_eq!(event_pane_id(&created), Some("w24:p1"));
+        let ack = serde_json::json!({
+            "id": "thread-to-tab",
+            "result": {"type": "subscription_started"}
+        });
+        assert_eq!(event_pane_id(&ack), None);
     }
 }

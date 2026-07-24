@@ -29,9 +29,14 @@ case "$1 $2" in
       printf '%s\n' '{{"result":{{"panes":[]}}}}'
     fi
     ;;
-  "pane get") printf '%s\n' '{{"result":{{"pane":{{"agent":"claude","pane_id":"1-1","tab_id":"1:1","terminal_id":"term-1","terminal_title_stripped":"Listener title"}}}}}}' ;;
+  "pane get")
+    case "$3" in
+      "2-1") printf '%s\n' '{{"result":{{"pane":{{"agent":"claude","pane_id":"2-1","tab_id":"2:1","terminal_id":"term-2","terminal_title_stripped":"Event title"}}}}}}' ;;
+      *) printf '%s\n' '{{"result":{{"pane":{{"agent":"claude","pane_id":"1-1","tab_id":"1:1","terminal_id":"term-1","terminal_title_stripped":"Listener title"}}}}}}' ;;
+    esac
+    ;;
   "tab get") printf '%s\n' '{{"result":{{"tab":{{"label":"1","pane_count":1}}}}}}' ;;
-  "tab rename") printf '%s|%s\n' "$3" "$4" > '{}' ;;
+  "tab rename") printf '%s|%s\n' "$3" "$4" >> '{}' ;;
   *) exit 2 ;;
 esac
 "#,
@@ -53,6 +58,14 @@ esac
         let request: Value = serde_json::from_str(&request).unwrap();
         assert_eq!(request["method"], "events.subscribe");
         connection.write_all(b"not-json\n").unwrap();
+        // Real streamed envelope shape: subscription requests use dot names,
+        // but pushed events arrive snake_cased with the pane under "data".
+        connection
+            .write_all(
+                br#"{"event":"pane_updated","data":{"type":"pane_updated","pane":{"pane_id":"2-1"}}}
+"#,
+            )
+            .unwrap();
     });
 
     let binary = std::env::var_os("THREAD_TO_TAB_TEST_LISTENER_BINARY")
@@ -73,8 +86,9 @@ esac
     assert!(stderr.contains("event socket closed"));
     assert_eq!(
         fs::read_to_string(rename_log).unwrap(),
-        "1:1|Listener title\n"
+        "1:1|Listener title\n2:1|Event title\n"
     );
     let state = fs::read_to_string(directory.path().join("state/titles.json")).unwrap();
     assert!(state.contains("\"term-1\": \"Listener title\""));
+    assert!(state.contains("\"term-2\": \"Event title\""));
 }
